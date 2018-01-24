@@ -1,0 +1,210 @@
+#!/bin/bash
+
+: <<HEADER
+Protect Disks v1.0 on 18 January 2018
+Copyright (c) 2018 by Jeremy O'Connell - Cyberweb Solutions, LLC @ www.cyberws.com
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+HEADER
+
+######################################################################
+# Variables
+######################################################################
+
+# Version number
+VERSION="1.0"
+GITHUBVERSION="2.0"
+
+# Capture all flags
+ddargs=$@
+
+# Capture first
+action=$1
+
+# Header
+######################################################################
+echo "☀ Protect Disks v$VERSION ☀ "
+
+# Footer
+######################################################################
+FOOTER() {
+exit
+}
+
+# Error Msg
+######################################################################
+ERROR() {
+	echo "$1"
+}
+
+# Success Msg
+######################################################################
+SUCCESS() {
+	echo "☑ $1"
+}
+
+# Menu Item display
+######################################################################
+MENU_ITEM() {
+	printf "%-10s %-2s %s\n" "$1" "" "$2";
+}
+
+#if (( $(echo "$GITHUBVERSION > $VERSION" | bc -l) ))
+#then
+#	echo "Outdate version!"
+#fi
+
+###################################
+# Check for protected devices file
+###################################
+
+# Set user's home directory
+userhome="/home/"$USER
+
+# Set app config directory
+userhome+="/.config/pdisks/"
+
+# Set config file
+configfile="$userhome/config"
+
+# If .config doesn't exist then create it
+if [ ! -d "$userhome" ]
+then
+	mkdir -p $userhome
+fi
+
+# If config file doesn't exist create it
+if [ ! -f "$configfile" ]
+then
+	touch $configfile
+fi
+
+# Read config file
+configdata=`cat $configfile`
+
+# If config is blank run protect to build
+if [ -z "$configdata" ]
+then
+	action="protect"
+fi
+
+# Build file with protected devices
+######################################################################
+if test "$action" == "protect"
+then
+	
+	# Get sd* list
+	SDEVLIST=`ls /dev/sd*`
+
+	# Write to config file
+	echo 'SDEVLIST="'$SDEVLIST'"' > $configfile
+
+	# Display notice to user
+	SUCCESS "Connected/online drive(s) and partition(s) saved to protected device list"
+	SUCCESS "If you attempted to issue a command please rerun - up arrow then hit enter!"
+
+	FOOTER
+fi
+
+# Help
+######################################################################
+if test "$action" == "help"
+then
+	script_name=${0##*/}
+
+	echo "This utility will call dd AFTER verifying you haven't accidently entered one of your system drive(s)/partitions(s)"$'\n'
+	echo "When writing out images to USB sticks a mistype could easily destroy your system.  All options and flags from dd still apply. However before running dd the information will be checked to prevent damage to your computer.  If all passes then dd will be loaded."$'\n'
+
+	echo "Commands:"$'\n'
+
+	MENU_ITEM "protect" "Saves currently connected storage devices and partitions to protect list"
+	MENU_ITEM "help" "This guide"
+
+	echo $'\n'"For standard operation simply enter the name of this script and normal dd commands (ALL dd commands/flags are supported):"$'\n'
+	echo "Example:"$'\n'"$script_name if=\"/dev/null\" of=\"/dev/sdv\""$'\n'
+
+	FOOTER
+fi
+
+# Check command and if possible send to dd
+######################################################################
+	# Build config
+	IFS=$'\n' read -rd '' -a CONFIG_VARS <<< "$configdata"
+	for CONFIG_VARS_DATA in "${CONFIG_VARS[@]}"
+	do
+		# Split data
+		IFS='=' read -a CONFIG_DATA <<< "${CONFIG_VARS_DATA}"
+
+		# Remove first and last quotes
+		CONFIG_DATA_VALUE="${CONFIG_DATA[1]//\"/}"
+		CONFIG_ARRAY[${CONFIG_DATA[0]}]="$CONFIG_DATA_VALUE"
+
+		# Declare CONFIG_ARRAY
+		declare -A SDEVLIST
+
+		# Build SDEVLIST
+		if test 'SDEVLIST' == "${CONFIG_DATA[0]}"
+		then
+			# Build list
+			CURRENTDEVS=($CONFIG_DATA_VALUE);
+			for CURRENTDEV in "${CURRENTDEVS[@]}"
+			do
+				SDEVLIST[$CURRENTDEV]="y"
+			done
+		fi
+	done
+
+	# Variables
+	DEF_IN="n"
+	DEF_OUT="n"
+	
+	# Check each command line argument
+	for i
+	do
+		# Verify if is defined
+		if [[ $i = *"if="* ]]
+		then
+			DEF_IN="y"
+		fi		
+
+		# Verify of is safe
+		if [[ $i = *"of="* ]]
+		then
+			# Set DEF_OUT defined
+			DEF_OUT="y"
+
+			# Get /dev/sd?
+			DEVCHK="${i//of=/}"
+
+			# Remove trailing slash
+			DEVCHK=${DEVCHK%/}
+
+			# Check protect list
+			if test "${SDEVLIST[$DEVCHK]+isset}"
+			then
+				ERROR "☒ Aborting protected drive/partition!!!"
+				ERROR "☒ Dangerous - not allowed!"
+				exit
+			fi
+		fi
+	done
+
+	# Verify if and of are defined
+	if [[ $DEF_IN == "y" && $DEF_OUT == "y" ]]
+	then
+		SUCCESS "Safe! Now passing the following to dd"
+		echo "$ddargs"
+		echo "RUN DD HERE: d2d $ddargs"
+		#######sudo dd $ddargs
+	else
+		ERROR "You need both if= AND of="
+	fi
+
