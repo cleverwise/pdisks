@@ -1,7 +1,7 @@
 #!/bin/bash
 
 : <<HEADER
-Protect Disks v1.0 on 18 January 2018
+Protect Disks v1.1 on 24 January 2018
 Copyright (c) 2018 by Jeremy O'Connell - Cyberweb Solutions, LLC @ www.cyberws.com
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -20,7 +20,7 @@ HEADER
 ######################################################################
 
 # Version number
-VERSION="1.0"
+VERSION="1.1"
 GITHUBVERSION="2.0"
 
 # Capture all flags
@@ -51,16 +51,42 @@ SUCCESS() {
 	echo "☑ $1"
 }
 
-# Menu Item display
+# Menu Item Display
 ######################################################################
 MENU_ITEM() {
 	printf "%-10s %-2s %s\n" "$1" "" "$2";
 }
 
-#if (( $(echo "$GITHUBVERSION > $VERSION" | bc -l) ))
-#then
-#	echo "Outdate version!"
-#fi
+# Get Protected Directories
+######################################################################
+GETPROTECTED() {
+	# Build config
+	IFS=$'\n' read -rd '' -a CONFIG_VARS <<< "$configdata"
+
+	for CONFIG_VARS_DATA in "${CONFIG_VARS[@]}"
+	do
+		# Split data
+		IFS='=' read -a CONFIG_DATA <<< "${CONFIG_VARS_DATA}"
+
+		# Remove first and last quotes
+		CONFIG_DATA_VALUE="${CONFIG_DATA[1]//\"/}"
+		CONFIG_ARRAY[${CONFIG_DATA[0]}]="$CONFIG_DATA_VALUE"
+
+		# Declare SDEVLIST
+		declare -Ag SDEVLIST
+
+		# Build SDEVLIST
+		if test 'SDEVLIST' == "${CONFIG_DATA[0]}"
+		then
+			# Build list
+			CURRENTDEVS=($CONFIG_DATA_VALUE);
+			for CURRENTDEV in "${CURRENTDEVS[@]}"
+			do
+				SDEVLIST[$CURRENTDEV]="y"
+			done
+		fi
+	done
+}
 
 ###################################
 # Check for protected devices file
@@ -114,6 +140,78 @@ then
 	FOOTER
 fi
 
+# List protected devices
+######################################################################
+if test "$action" == "list"
+then
+	# Protected directories
+	GETPROTECTED
+
+	echo "Protected drives and partitions:"
+	for i in "${!SDEVLIST[@]}"
+	do
+		echo "$i"
+	done
+
+	FOOTER
+fi
+
+# Version check
+######################################################################
+if test "$action" == "version"
+then
+	# Load current version from github
+	GH_VERSION=`curl -s https://raw.githubusercontent.com/cleverwise/pdisks/master/version`
+
+	if [ -z $GH_VERSION ]
+	then
+		MSG="🗷 ERROR: UNABLE TO CONNECT TO GITHUB VERSION CHECK!!!"
+		GH_VERSION="Unknown - can NOT connect to GitHub"
+	else
+
+		if (( $(echo "$GH_VERSION > $VERSION" | bc -l) ))
+		then
+			MSG="🗷 UPGRADE REQUIRED! VERSIONS DO NOT MATCH!"
+		else
+			MSG="🗹 LATEST VERSION!"
+		fi
+	fi
+	echo "$MSG"$'\n'
+	echo "Github Version: $GH_VERSION"
+	echo "Installed Version: $VERSION"
+	echo $'\n'"Github: https://github.com/cleverwise/pdisks"
+
+	FOOTER
+fi
+
+# Credits
+######################################################################
+if test "$action" == "credits"
+then
+	ACTION_BANNER "Credits"
+
+	echo "Lead programmer: Jeremy O'Connell"
+	echo "🗁  Cyberweb Solutions, LLC -> www.CyberWS.com"$'\n'
+	echo "Testing and collaboration: Joe Collins"
+	echo "🗁  EzeeLinux -> www.EzeeLinux.com"$'\n'
+
+	FOOTER
+fi
+
+# Software
+######################################################################
+if test "$action" == "software"
+then
+	ACTION_BANNER "Software Titles"
+
+	# Load current software from github
+	GH_SOFTWARE=`curl -s https://raw.githubusercontent.com/cleverwise/connect2ssh/master/software`
+
+	echo "$GH_SOFTWARE"
+
+	FOOTER
+fi
+
 # Help
 ######################################################################
 if test "$action" == "help"
@@ -125,8 +223,11 @@ then
 
 	echo "Commands:"$'\n'
 
-	MENU_ITEM "protect" "Saves currently connected storage devices and partitions to protect list"
-	MENU_ITEM "help" "This guide"
+	MENU_ITEM "protect" "Saves currently connected storage drives and partitions to protect"
+	MENU_ITEM "list" "Shows a list of protected drives and partitions"
+	MENU_ITEM "version" "Check for new version"
+	MENU_ITEM "software" "View software titles"
+	MENU_ITEM "credits" "View programmers/contributors"
 
 	echo $'\n'"For standard operation simply enter the name of this script and normal dd commands (ALL dd commands/flags are supported):"$'\n'
 	echo "Example:"$'\n'"$script_name if=\"/dev/null\" of=\"/dev/sdv\""$'\n'
@@ -136,31 +237,9 @@ fi
 
 # Check command and if possible send to dd
 ######################################################################
-	# Build config
-	IFS=$'\n' read -rd '' -a CONFIG_VARS <<< "$configdata"
-	for CONFIG_VARS_DATA in "${CONFIG_VARS[@]}"
-	do
-		# Split data
-		IFS='=' read -a CONFIG_DATA <<< "${CONFIG_VARS_DATA}"
 
-		# Remove first and last quotes
-		CONFIG_DATA_VALUE="${CONFIG_DATA[1]//\"/}"
-		CONFIG_ARRAY[${CONFIG_DATA[0]}]="$CONFIG_DATA_VALUE"
-
-		# Declare CONFIG_ARRAY
-		declare -A SDEVLIST
-
-		# Build SDEVLIST
-		if test 'SDEVLIST' == "${CONFIG_DATA[0]}"
-		then
-			# Build list
-			CURRENTDEVS=($CONFIG_DATA_VALUE);
-			for CURRENTDEV in "${CURRENTDEVS[@]}"
-			do
-				SDEVLIST[$CURRENTDEV]="y"
-			done
-		fi
-	done
+	# Protected directories
+	GETPROTECTED
 
 	# Variables
 	DEF_IN="n"
