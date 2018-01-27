@@ -27,8 +27,8 @@ Well let's say you have an Internal SSD, an USB external drive connected, and an
 So while the protection is worth it there are some situations that could occur that may get you confused.  Also you could create a situation where a protected removable drive is no longer protected.  How?  Let's say you have an SSD internal and external USB drive.  You run pdisks to build the blacklist.  Then you disconnect the USB drive which was /dev/sdb and protected and plugin a USB stick which now becomes /dev/sdb.  Now with the USB stick still plugged in you reconnect the USB drive which becomes /dev/sdc and thus no longer protected.
 
 **So again pdisks is really about protecting your core unchanging partitions and drives, but it can offer some level of protection for devices that are connected and disconnected.  Still think of it as an internal and always connected removable storage protector.**
-More information: [https://www.cyberws.com/bash/pdisks/](https://www.cyberws.com/bash/pdisks/)
 
+More information: [https://www.cyberws.com/bash/pdisks/](https://www.cyberws.com/bash/pdisks/)
 
 ## Updates
 
