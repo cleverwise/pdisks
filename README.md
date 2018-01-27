@@ -1,8 +1,6 @@
 # pdisks - Protect Disks
 
-##This project is still in development##
-
-###Protect yourself when using DD!###
+## This project is still in development ##
 
 DD in the *nix world is a **VERY powerful yet VERY destructive command**.  
 
@@ -69,7 +67,7 @@ You simply replace the dd command with pdisks.  All flags and commands stay the 
 
 Examples:
 
-shell> **pdisks if="/dev/null" of="/dev/sde"
+shell> **pdisks if="/dev/null" of="/dev/sde"**
 
 shell> **pdisks if=system.img of=/dev/sdc bs=4096 conv=noerror**
 
