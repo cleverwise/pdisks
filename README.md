@@ -77,7 +77,7 @@ shell> **pdisks protect**
 
 #### Manually Editing The Blacklist
 
-1) Using your preferred text editor open the **config ** in **/home/USER/.config/pdisks**
+1) Using your preferred text editor open the **config** in **/home/USER/.config/pdisks**
 2) Edit the variable **SDEVLIST** with each drive and partition separated by a space.
 3) Save and close.
 
